@@ -11,10 +11,22 @@ from dir import (source_dir, dest_dir_img, dest_dir_doc, dest_dir_exe, dest_dir_
 class MoveHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
+
         create_directories()
+        # set to keep track of processed files to avoid attempt of moving the same file multiple times
+        processed_files = []
+
         with os.scandir(source_dir) as entries:
             for entry in entries:
+                # skip directories and temporary files
+                if not entry.is_file() or entry.name.endswith('.tmp'):
+                    continue
                 name = entry.name
+                # skip files that have already been processed
+                if name in processed_files:
+                    continue
+                processed_files.append(name)
+
                 check_image_files(entry, name)
                 check_doc_files(entry, name)
                 check_exe_files(entry, name)
@@ -44,6 +56,7 @@ def check_files(entry, name, extensions, dest):
         if name.endswith(extension) or name.endswith(extension.upper()):
             move_file(dest, entry, name)
             logging.info(f"Moved {name} to {dest}")
+            break
 
 
 def check_image_files(entry, name):
@@ -71,16 +84,24 @@ def check_db_files(entry, name):
 
 
 def check_other_files(entry, name):
-    move_file(dest_dir_other, entry, name)
+    if os.path.exists(entry):
+        move_file(dest_dir_other, entry, name)
 
 
 def move_file(dest, entry, name):
-    if exists(f"{dest}"+r'\\'+f"{name}"):
+    destination_path = join(dest, name)
+    if exists(destination_path):
         unique_name = make_unique(dest, name)
-        old_name = join(dest, name)
         new_name = join(dest, unique_name)
-        os.rename(old_name, new_name)
-    move(entry, dest)
+        os.rename(destination_path, new_name)
+    try:
+        move(entry, dest)
+    except PermissionError as e:
+        logging.warning(f"Failed to move {name} to {dest}. Reason: {e}.")
+    except FileNotFoundError as e:
+        logging.error(f"Failed to find {name} at {entry.path}. It may have been moved or deleted. Error: {e}")
+    except Exception as e:
+        logging.error(f"Failed to move {name} due to an unexpected error: {e}")
 
 
 def make_unique(dest, name):
