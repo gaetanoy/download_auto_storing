@@ -11,7 +11,11 @@ from dir import (source_dir, dest_dir_img, dest_dir_doc, dest_dir_exe, dest_dir_
 class MoveHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
-
+        """
+        - Crée les répertoires de destination (si besoin)
+        - Parcourt les fichiers dans le répertoire source.
+        - Traite et déplace les fichiers selon leur type en évitant les doublons et les fichiers temporaires.
+        """
         create_directories()
         # set to keep track of processed files to avoid attempt of moving the same file multiple times
         processed_files = []
@@ -37,11 +41,20 @@ class MoveHandler(FileSystemEventHandler):
 
 
 def create_dir(directory):
+    """
+    Crée un répertoire s'il n'existe pas.
+    :param directory: chemin du répertoire
+    :return:
+    """
     if not exists(directory):
         os.makedirs(directory)
 
 
 def create_directories():
+    """
+    Crée tous les répertoires de destination nécessaires
+    :return:
+    """
     create_dir(dest_dir_img)
     create_dir(dest_dir_doc)
     create_dir(dest_dir_exe)
@@ -52,6 +65,14 @@ def create_directories():
 
 
 def check_files(entry, name, extensions, dest):
+    """
+    Vérifie si le fichier est du type attendu et le déplace dans le répertoire de destination.
+    :param entry: fichier à déplacer
+    :param name: nom du fichier
+    :param extensions: liste des extensions de fichiers attendues
+    :param dest: répertoire de destination
+    :return:
+    """
     for extension in extensions:
         if name.endswith(extension) or name.endswith(extension.upper()):
             move_file(dest, entry, name)
@@ -89,6 +110,15 @@ def check_other_files(entry, name):
 
 
 def move_file(dest, entry, name):
+    """
+    Déplace un fichier vers le répertoire de destination.
+    Gère les erreurs potentielles comme les permissions, les fichiers non trouvés ou d'autres exceptions.
+    Renomme les fichiers pour éviter les conflits.
+    :param dest: Chemin du répertoire de destination
+    :param entry: fichier à déplacer
+    :param name: nom du fichier
+    :return:
+    """
     destination_path = join(dest, name)
     if exists(destination_path):
         unique_name = make_unique(dest, name)
@@ -105,6 +135,12 @@ def move_file(dest, entry, name):
 
 
 def make_unique(dest, name):
+    """
+    Génère un nom de fichier unique en cas de conflit dans le répertoire de destination.
+    :param dest: Chemin du répertoire de destination
+    :param name: Fichier à déplacer
+    :return:
+    """
     filename, extension = splitext(name)
     counter = 1
     # si le fichier existe déjà, on itère sur le nom du fichier
